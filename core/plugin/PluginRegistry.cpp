@@ -25,6 +25,7 @@
 
 #include "app_config/AppConfig.h"
 #include "flusher/FlusherSLS.h"
+#include "flusher/FlusherRemoteWrite.h"
 #include "input/InputContainerStdio.h"
 #include "input/InputFile.h"
 #if defined(__linux__) && !defined(__ANDROID__)
@@ -144,6 +145,7 @@ void PluginRegistry::LoadStaticPlugins() {
 #endif
 
     RegisterFlusherCreator(new StaticFlusherCreator<FlusherSLS>());
+    RegisterFlusherCreator(new StaticFlusherCreator<FlusherRemoteWrite>());
 }
 
 void PluginRegistry::LoadDynamicPlugins(const set<string>& plugins) {

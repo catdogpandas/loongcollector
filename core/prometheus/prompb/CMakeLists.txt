@@ -1,4 +1,4 @@
-# Copyright 2023 iLogtail Authors
+# Copyright 2024 iLogtail Authors
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -13,14 +13,9 @@
 # limitations under the License.
 
 cmake_minimum_required(VERSION 3.22)
-project(flusher_unittest)
+project(prometheus_prompb)
 
-add_executable(flusher_sls_unittest FlusherSLSUnittest.cpp)
-target_link_libraries(flusher_sls_unittest unittest_base)
-
-add_executable(flusher_remote_write_unittest FlusherRemoteWriteUnittest.cpp)
-target_link_libraries(flusher_remote_write_unittest unittest_base)
-
-include(GoogleTest)
-gtest_discover_tests(flusher_sls_unittest)
-gtest_discover_tests(flusher_remote_write_unittest)
+file(GLOB LIB_SOURCE_FILES *.cpp *.cc *.h)
+append_source_files(LIB_SOURCE_FILES)
+add_library(${PROJECT_NAME} STATIC ${LIB_SOURCE_FILES})
+link_protobuf(${PROJECT_NAME})
