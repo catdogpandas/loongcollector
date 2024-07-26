@@ -3,24 +3,9 @@
 #include "batch/Batcher.h"
 #include "compression/Compressor.h"
 #include "plugin/interface/Flusher.h"
-#include "sdk/Closure.h"
-#include "serializer/RemoteWriteSerializer.h"
+#include "serializer/Serializer.h"
 
 namespace logtail {
-
-struct RemoteWriteResponseInfo {
-    int32_t statusCode;
-    std::string errorCode;
-    std::string errorMessage;
-};
-
-// class RemoteWriteClosure : public sdk::LogsClosure {
-// public:
-//     void Done() override;
-//     void OnSuccess(sdk::Response* response) override;
-//     void OnFail(sdk::Response* response, const std::string& errorCode, const std::string& errorMessage) override;
-//     std::promise<RemoteWriteResponseInfo> mPromise;
-// };
 
 class FlusherRemoteWrite : public Flusher {
 public:
@@ -30,12 +15,10 @@ public:
 
     const std::string& Name() const override { return sName; }
     bool Init(const Json::Value& config, Json::Value& optionalGoPipeline) override;
-    void Send(PipelineEventGroup&& g) override;
-    void Flush(size_t key) override;
-    void FlushAll() override;
+    bool Send(PipelineEventGroup&& g) override;
+    bool Flush(size_t key) override;
+    bool FlushAll() override;
     sdk::AsynRequest* BuildRequest(SenderQueueItem* item) const override;
-
-    LogstoreFeedBackKey GetLogstoreKey() const { return mLogstoreKey; }
 
 private:
     Batcher<> mBatcher;
@@ -49,15 +32,13 @@ private:
     std::string mClusterId;
     std::string mRegion;
 
-    logtail::LogstoreFeedBackKey mLogstoreKey;
-
-    void SerializeAndPush(std::vector<BatchedEventsList>&& groupLists);
-    void SerializeAndPush(BatchedEventsList&& groupList);
+    bool SerializeAndPush(std::vector<BatchedEventsList>&& groupLists);
+    bool SerializeAndPush(BatchedEventsList&& groupList);
 
     void PushToQueue(std::string&& data, size_t rawSize, RawDataType type);
+    bool PushToQueue(QueueKey key, std::unique_ptr<SenderQueueItem>&& item, uint32_t retryTimes = 500);
 
 #ifdef APSARA_UNIT_TEST_MAIN
-    std::vector<SenderQueueItem*> mItems;
     friend class FlusherRemoteWriteTest;
 #endif
 };

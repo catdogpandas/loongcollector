@@ -1,8 +1,11 @@
 #include "FlusherRemoteWrite.h"
 
 #include "compression/CompressorFactory.h"
+#include "prometheus/Constants.h"
+#include "queue/SenderQueueManager.h"
 #include "sdk/Common.h"
 #include "sender/Sender.h"
+#include "serializer/RemoteWriteSerializer.h"
 
 using namespace std;
 
@@ -14,41 +17,41 @@ FlusherRemoteWrite::FlusherRemoteWrite() {
     LOG_INFO(sLogger, ("LOG_INFO flusher", ""));
 }
 
-
-bool FlusherRemoteWrite::Init(const Json::Value& config, Json::Value& optionalGoPipeline) {
+bool FlusherRemoteWrite::Init(const Json::Value& config, Json::Value&) {
     string errorMsg;
     LOG_INFO(sLogger, ("LOG_INFO flusher config", config.toStyledString()));
 
     // config
     // {
-    //   "Type": "flusher_remote_write/flusher_push_gateway",
+    //   "Type": "flusher_remote_write",
     //   "Endpoint": "cn-hangzhou.arms.aliyuncs.com",
     //   "Scheme": "https",
     //   "UserId": "******",
     //   "ClusterId": "*******",
     //   "Region": "cn-hangzhou"
     // }
-    if (!config.isMember("Endpoint") || !config["Endpoint"].isString() || !config.isMember("Scheme")
-        || !config["Scheme"].isString() || !config.isMember("UserId") || !config["UserId"].isString()
-        || !config.isMember("ClusterId") || !config["ClusterId"].isString() || !config.isMember("Region")
-        || !config["Region"].isString()) {
+
+    if (!config.isMember(prometheus::ENDPOINT) || !config[prometheus::ENDPOINT].isString()
+        || !config.isMember(prometheus::SCHEME) || !config[prometheus::SCHEME].isString()
+        || !config.isMember(prometheus::USERID) || !config[prometheus::USERID].isString()
+        || !config.isMember(prometheus::CLUSTERID) || !config[prometheus::CLUSTERID].isString()
+        || !config.isMember(prometheus::REGION) || !config[prometheus::REGION].isString()) {
         errorMsg = "flusher_remote_write config error, must have Endpoint, Scheme, UserId, ClusterId, Region";
         LOG_ERROR(sLogger, ("LOG_ERROR flusher config", config.toStyledString())("error msg", errorMsg));
         return false;
     }
-    mEndpoint = config["Endpoint"].asString();
-    mScheme = config["Scheme"].asString();
-    mUserId = config["UserId"].asString();
-    mClusterId = config["ClusterId"].asString();
-    mRegion = config["Region"].asString();
-
-    mLogstoreKey = GenerateLogstoreFeedBackKey("remote_write_project", "remote_write_log_store");
-    mSenderQueue = Sender::Instance()->GetSenderQueue(mLogstoreKey);
+    mEndpoint = config[prometheus::ENDPOINT].asString();
+    mScheme = config[prometheus::SCHEME].asString();
+    mUserId = config[prometheus::USERID].asString();
+    mClusterId = config[prometheus::CLUSTERID].asString();
+    mRegion = config[prometheus::REGION].asString();
 
     mRemoteWritePath = "/prometheus/" + mUserId + "/" + mClusterId + "/" + mRegion + "/api/v2/write";
 
     // compressor
-    mCompressor = CompressorFactory::GetInstance()->Create(config, *mContext, sName, CompressType::SNAPPY);
+    // TODO: use SNAPPY
+    mCompressor = CompressorFactory::GetInstance()->Create(config, *mContext, sName, CompressType::LZ4);
+
     DefaultFlushStrategyOptions strategy{
         static_cast<uint32_t>(1024000), static_cast<uint32_t>(1000), static_cast<uint32_t>(1)};
     if (!mBatcher.Init(Json::Value(), this, strategy, false)) {
@@ -58,35 +61,34 @@ bool FlusherRemoteWrite::Init(const Json::Value& config, Json::Value& optionalGo
 
     mGroupSerializer = make_unique<RemoteWriteEventGroupSerializer>(this);
 
+    GenerateQueueKey("remote_write");
+    SenderQueueManager::GetInstance()->CreateQueue(
+        mQueueKey, vector<shared_ptr<ConcurrencyLimiter>>{make_shared<ConcurrencyLimiter>()}, 1024000);
+
     LOG_INFO(sLogger, ("init info:", "prometheus remote write init successful !"));
 
     return true;
-    
 }
 
-void FlusherRemoteWrite::Send(PipelineEventGroup&& g) {
-    LOG_INFO(sLogger, ("LOG_INFO flusher Send", sName));
+bool FlusherRemoteWrite::Send(PipelineEventGroup&& g) {
     vector<BatchedEventsList> res;
     mBatcher.Add(std::move(g), res);
-    SerializeAndPush(std::move(res));
+    return SerializeAndPush(std::move(res));
 }
 
-void FlusherRemoteWrite::Flush(size_t key) {
-    LOG_INFO(sLogger, ("LOG_INFO flusher Flush", sName));
+bool FlusherRemoteWrite::Flush(size_t key) {
     BatchedEventsList res;
     mBatcher.FlushQueue(key, res);
-    SerializeAndPush(std::move(res));
+    return SerializeAndPush(std::move(res));
 }
 
-void FlusherRemoteWrite::FlushAll() {
-    LOG_INFO(sLogger, ("LOG_INFO flusher FlushAll", sName));
+bool FlusherRemoteWrite::FlushAll() {
     vector<BatchedEventsList> res;
     mBatcher.FlushAll(res);
-    SerializeAndPush(std::move(res));
+    return SerializeAndPush(std::move(res));
 }
 
 sdk::AsynRequest* FlusherRemoteWrite::BuildRequest(SenderQueueItem* item) const {
-    LOG_INFO(sLogger, ("LOG_INFO flusher BuildRequest", sName));
     SendClosure* closure = new SendClosure;
     closure->mDataPtr = item;
     sdk::Response* response = new sdk::PostLogStoreLogsResponse();
@@ -102,17 +104,18 @@ sdk::AsynRequest* FlusherRemoteWrite::BuildRequest(SenderQueueItem* item) const 
         httpMethod, mEndpoint, port, mRemoteWritePath, "", headers, item->mData, 30, "", httpsFlag, closure, response);
 }
 
-void FlusherRemoteWrite::SerializeAndPush(std::vector<BatchedEventsList>&& groupLists) {
-    LOG_INFO(sLogger, ("LOG_INFO flusher SerializeAndPush", sName));
+bool FlusherRemoteWrite::SerializeAndPush(std::vector<BatchedEventsList>&& groupLists) {
     for (auto& groupList : groupLists) {
         SerializeAndPush(std::move(groupList));
     }
+    return true;
 }
 
-void FlusherRemoteWrite::SerializeAndPush(BatchedEventsList&& groupList) {
-    LOG_INFO(sLogger, ("LOG_INFO flusher SerializeAndPush", sName));
+bool FlusherRemoteWrite::SerializeAndPush(BatchedEventsList&& groupList) {
     for (auto& batchedEv : groupList) {
-        string data, compressedData, errMsg;
+        string data;
+        string compressedData;
+        string errMsg;
         mGroupSerializer->Serialize(std::move(batchedEv), data, errMsg);
         if (!errMsg.empty()) {
             LOG_ERROR(sLogger, ("LOG_ERROR serialize event group", errMsg));
@@ -126,40 +129,22 @@ void FlusherRemoteWrite::SerializeAndPush(BatchedEventsList&& groupList) {
                 LOG_WARNING(mContext->GetLogger(),
                             ("failed to compress arms metrics event group",
                              errMsg)("action", "discard data")("plugin", sName)("config", mContext->GetConfigName()));
-                return;
+                return false;
             }
         } else {
             compressedData = data;
         }
-        PushToQueue(std::move(compressedData), packageSize, RawDataType::EVENT_GROUP);
+        PushToQueue(mQueueKey,
+                    make_unique<SenderQueueItem>(
+                        std::move(compressedData), packageSize, this, mQueueKey, RawDataType::EVENT_GROUP, false),
+                    1);
     }
+    return true;
 }
 
-void FlusherRemoteWrite::PushToQueue(string&& data, size_t rawSize, RawDataType type) {
-    // TODO: mQueueKey && groupStrategy
-    LOG_INFO(sLogger, ("LOG_INFO flusher PushToQueue", sName));
-    SenderQueueItem* item = new SenderQueueItem(std::move(data), rawSize, this, mLogstoreKey, type);
-#ifdef APSARA_UNIT_TEST_MAIN
-    mItems.push_back(item);
-#else
-    Sender::Instance()->PutIntoBatchMap(item, mRegion);
-#endif
+bool FlusherRemoteWrite::PushToQueue(QueueKey key, unique_ptr<SenderQueueItem>&& item, uint32_t) {
+    SenderQueueManager::GetInstance()->PushQueue(key, std::move(item));
+    return true;
 }
-
-// void RemoteWriteClosure::Done() {
-//     LOG_INFO(sLogger, ("remote write closure", "done"));
-// }
-
-// void RemoteWriteClosure::OnSuccess(sdk::Response* response) {
-//     LOG_INFO(sLogger, ("remote write closure", "success"));
-//     mPromise.set_value(RemoteWriteResponseInfo{response->statusCode, "", ""});
-// }
-
-// void RemoteWriteClosure::OnFail(sdk::Response* response,
-//                                 const std::string& errorCode,
-//                                 const std::string& errorMessage) {
-//     LOG_INFO(sLogger, ("remote write closure fail", errorCode + errorMessage));
-//     mPromise.set_value(RemoteWriteResponseInfo{response->statusCode, errorCode, errorMessage});
-// }
 
 } // namespace logtail
