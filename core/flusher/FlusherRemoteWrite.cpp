@@ -89,7 +89,7 @@ bool FlusherRemoteWrite::FlushAll() {
 }
 
 sdk::AsynRequest* FlusherRemoteWrite::BuildRequest(SenderQueueItem* item) const {
-    SendClosure* closure = new SendClosure;
+    auto* closure = new SendClosure;
     closure->mDataPtr = item;
     sdk::Response* response = new sdk::PostLogStoreLogsResponse();
     string httpMethod = "POST";
@@ -122,8 +122,7 @@ bool FlusherRemoteWrite::SerializeAndPush(BatchedEventsList&& groupList) {
             continue;
         }
 
-        size_t packageSize = 0;
-        packageSize += data.size();
+        size_t packageSize = data.size();
         if (mCompressor) {
             if (!mCompressor->Compress(data, compressedData, errMsg)) {
                 LOG_WARNING(mContext->GetLogger(),
