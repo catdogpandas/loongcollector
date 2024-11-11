@@ -47,7 +47,6 @@ size_t MetricWriteCallback(char* buffer, size_t size, size_t nmemb, void* data) 
     }
 
     auto* body = static_cast<MetricResponseBody*>(data);
-    body->mEventGroup.ReserveEvents(body->mEventGroup.GetEvents().size() + (sizes >> 10));
 
     size_t begin = 0;
     for (size_t end = begin; end < sizes; ++end) {
