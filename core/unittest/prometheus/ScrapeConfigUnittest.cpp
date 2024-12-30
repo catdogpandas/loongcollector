@@ -20,6 +20,7 @@ public:
     void TestScrapeProtocols();
     void TestEnableCompression();
     void TestTLS();
+    void TestTLSPlainText();
 
 private:
     void SetUp() override;
@@ -469,6 +470,109 @@ void ScrapeConfigUnittest::TestTLS() {
     APSARA_TEST_EQUAL(false, scrapeConfig.mTLS.mInsecureSkipVerify);
 }
 
+void ScrapeConfigUnittest::TestTLSPlainText() {
+    Json::Value config;
+    ScrapeConfig scrapeConfig;
+    string errorMsg;
+    string configStr;
+
+    // default
+    configStr = R"JSON({
+            "job_name": "test_job",
+            "scrape_interval": "30s",
+            "scrape_timeout": "30s",
+            "metrics_path": "/metrics",
+            "scheme": "http"
+        })JSON";
+    APSARA_TEST_TRUE(ParseJsonTable(configStr, config, errorMsg));
+    APSARA_TEST_TRUE(scrapeConfig.Init(config));
+    APSARA_TEST_EQUAL(false, scrapeConfig.mEnableTLS);
+
+    // enable
+    configStr = R"JSON({
+            "job_name": "test_job",
+            "scrape_interval": "30s",
+            "scrape_timeout": "30s",
+            "metrics_path": "/metrics",
+            "scheme": "http",
+            "tls_config": {
+                "ca": "-----BEGIN CERTIFICATE-----
+MIIDTjCCAjagAwIBAgIUH66dZMu7Ax584x0aCy4lbbTcuQswDQYJKoZIhvcNAQEL
+BQAwPjEnMA8GA1UEChMIaGFuZ3pob3UwFAYDVQQKEw1hbGliYWJhIGNsb3VkMRMw
+EQYDVQQDEwprdWJlcm5ldGVzMCAXDTI0MTEwNjA4MjgwMFoYDzIwNTQxMDMwMDgy
+ODAwWjA+MScwDwYDVQQKEwhoYW5nemhvdTAUBgNVBAoTDWFsaWJhYmEgY2xvdWQx
+EzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQC/k4U10fMIfK4YW7Cmg9uKDN+h9FXqGFHfnDTMOtwIpus8MMCS75bc7evt
+dabSenUH/rxpOpdq3IHmj0YhgDuc84x0eI1fLFLTinNkpW8lHkoo8dLFphJSj1i/
+4hKHxmLqqv45Bgfds9FSPCgnK0y3SGzdeP2ZATyA6eWCaMlW55SB3xkwNIQHUncU
+LSsvlg6apaHT9z7RcnjMPHzv0w1/FGHzjDdA6I/eCfNdh592X49/TzIBYz/CdGTK
+TNCG3w2gUJENhX924LdioA7jD6jAQrMEkVynRqnCYwtpw1QN4eHsUq7LvGjyYGer
+wJ0Ftqeaoqxh0Mp7lx26MNUptPdjAgMBAAGjQjBAMA4GA1UdDwEB/wQEAwICrDAP
+BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQp9J79YHejXFtbdop9r5UQnxck9zAN
+BgkqhkiG9w0BAQsFAAOCAQEAHB2jB6zKWwZ9DwSTw5I4JFLyyQ12WS2fehQkTQW/
+nWpMpyTeZvIjZxk7yoer/GK2XVgmq2sil76VdDYMEx/79hJRFxTdtGdH42BiaLAx
+JEkeZagruyPD/PJqy17IxEdzXSexrGOtb9uFO69DD5nK8iqKdQ74wXIx9h/7jldF
+hAT+tYl2UNPGRLVk+2JKStfQC6lu1JpZDdoK8Qoq85rP6Tnb6PJ0eqfCyAsQwplC
+M+QmSI6BOUtNrZKiYJnKTgRk9sUaXbC9W06Uldq9vN1SiGxM2a4M7R/8lZGC658I
+HdL2lWHDj89WNrvywIlxQC5hRiQIO3EbUYVFUH/skbqehQ==",
+                "cert": "-----BEGIN CERTIFICATE-----
+xxx
+bQ==
+-----END CERTIFICATE-----",
+                "key": "-----BEGIN PRIVATE KEY-----
+xxx
+Q==
+-----END PRIVATE KEY-----",
+                "insecure_skip_verify": false
+            }
+        })JSON";
+    APSARA_TEST_TRUE(ParseJsonTable(configStr, config, errorMsg));
+    APSARA_TEST_TRUE(scrapeConfig.Init(config));
+    APSARA_TEST_EQUAL(true, scrapeConfig.mEnableTLS);
+    APSARA_TEST_EQUAL("/tmp/test_job_ca.pem", scrapeConfig.mTLS.mCaFile);
+    APSARA_TEST_EQUAL("/tmp/test_job_cert.pem", scrapeConfig.mTLS.mCertFile);
+    APSARA_TEST_EQUAL("/tmp/test_job_key.pem", scrapeConfig.mTLS.mKeyFile);
+    APSARA_TEST_EQUAL(false, scrapeConfig.mTLS.mInsecureSkipVerify);
+
+    // judge the file content
+    string data;
+    APSARA_TEST_TRUE(ReadFile("/tmp/test_job_ca.pem", data));
+    string content = R"(-----BEGIN CERTIFICATE-----
+MIIDTjCCAjagAwIBAgIUH66dZMu7Ax584x0aCy4lbbTcuQswDQYJKoZIhvcNAQEL
+BQAwPjEnMA8GA1UEChMIaGFuZ3pob3UwFAYDVQQKEw1hbGliYWJhIGNsb3VkMRMw
+EQYDVQQDEwprdWJlcm5ldGVzMCAXDTI0MTEwNjA4MjgwMFoYDzIwNTQxMDMwMDgy
+ODAwWjA+MScwDwYDVQQKEwhoYW5nemhvdTAUBgNVBAoTDWFsaWJhYmEgY2xvdWQx
+EzARBgNVBAMTCmt1YmVybmV0ZXMwggEiMA0GCSqGSIb3DQEBAQUAA4IBDwAwggEK
+AoIBAQC/k4U10fMIfK4YW7Cmg9uKDN+h9FXqGFHfnDTMOtwIpus8MMCS75bc7evt
+dabSenUH/rxpOpdq3IHmj0YhgDuc84x0eI1fLFLTinNkpW8lHkoo8dLFphJSj1i/
+4hKHxmLqqv45Bgfds9FSPCgnK0y3SGzdeP2ZATyA6eWCaMlW55SB3xkwNIQHUncU
+LSsvlg6apaHT9z7RcnjMPHzv0w1/FGHzjDdA6I/eCfNdh592X49/TzIBYz/CdGTK
+TNCG3w2gUJENhX924LdioA7jD6jAQrMEkVynRqnCYwtpw1QN4eHsUq7LvGjyYGer
+wJ0Ftqeaoqxh0Mp7lx26MNUptPdjAgMBAAGjQjBAMA4GA1UdDwEB/wQEAwICrDAP
+BgNVHRMBAf8EBTADAQH/MB0GA1UdDgQWBBQp9J79YHejXFtbdop9r5UQnxck9zAN
+BgkqhkiG9w0BAQsFAAOCAQEAHB2jB6zKWwZ9DwSTw5I4JFLyyQ12WS2fehQkTQW/
+nWpMpyTeZvIjZxk7yoer/GK2XVgmq2sil76VdDYMEx/79hJRFxTdtGdH42BiaLAx
+JEkeZagruyPD/PJqy17IxEdzXSexrGOtb9uFO69DD5nK8iqKdQ74wXIx9h/7jldF
+hAT+tYl2UNPGRLVk+2JKStfQC6lu1JpZDdoK8Qoq85rP6Tnb6PJ0eqfCyAsQwplC
+M+QmSI6BOUtNrZKiYJnKTgRk9sUaXbC9W06Uldq9vN1SiGxM2a4M7R/8lZGC658I
+HdL2lWHDj89WNrvywIlxQC5hRiQIO3EbUYVFUH/skbqehQ==)";
+    APSARA_TEST_EQUAL(content, data);
+    data.clear();
+    APSARA_TEST_TRUE(ReadFile("/tmp/test_job_cert.pem", data));
+    content = R"(-----BEGIN CERTIFICATE-----
+xxx
+bQ==
+-----END CERTIFICATE-----)";
+    APSARA_TEST_EQUAL(content, data);
+    data.clear();
+    APSARA_TEST_TRUE(ReadFile("/tmp/test_job_key.pem", data));
+    content = R"(-----BEGIN PRIVATE KEY-----
+xxx
+Q==
+-----END PRIVATE KEY-----)";
+    APSARA_TEST_EQUAL(content, data);
+}
+
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestInit);
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestAuth);
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestBasicAuth);
@@ -476,6 +580,7 @@ UNIT_TEST_CASE(ScrapeConfigUnittest, TestAuthorization);
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestScrapeProtocols);
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestEnableCompression);
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestTLS);
+UNIT_TEST_CASE(ScrapeConfigUnittest, TestTLSPlainText);
 
 } // namespace logtail
 

@@ -353,6 +353,18 @@ void ScrapeConfig::InitEnableCompression(bool enableCompression) {
 }
 
 bool ScrapeConfig::InitTLSConfig(const Json::Value& tlsConfig) {
+    if (tlsConfig.isMember(prometheus::CA_FILE) && tlsConfig.isMember(prometheus::CA)) {
+        LOG_ERROR(sLogger, ("tls config error", "ca_file and ca both set"));
+        return false;
+    }
+    if (tlsConfig.isMember(prometheus::CERT_FILE) && tlsConfig.isMember(prometheus::CERT)) {
+        LOG_ERROR(sLogger, ("tls config error", "cert_file and cert both set"));
+        return false;
+    }
+    if (tlsConfig.isMember(prometheus::KEY_FILE) && tlsConfig.isMember(prometheus::KEY)) {
+        LOG_ERROR(sLogger, ("tls config error", "key_file and key both set"));
+        return false;
+    }
     if (tlsConfig.isMember(prometheus::CA_FILE)) {
         if (tlsConfig[prometheus::CA_FILE].isString()) {
             mTLS.mCaFile = tlsConfig[prometheus::CA_FILE].asString();
@@ -372,6 +384,66 @@ bool ScrapeConfig::InitTLSConfig(const Json::Value& tlsConfig) {
     if (tlsConfig.isMember(prometheus::KEY_FILE)) {
         if (tlsConfig[prometheus::KEY_FILE].isString()) {
             mTLS.mKeyFile = tlsConfig[prometheus::KEY_FILE].asString();
+        } else {
+            LOG_ERROR(sLogger, ("tls config error", ""));
+            return false;
+        }
+    }
+    if (tlsConfig.isMember(prometheus::CA)) {
+        if (tlsConfig[prometheus::CA].isString()) {
+            auto tmpCA = tlsConfig[prometheus::CA].asString();
+            // write to /tmp/job_name_ca.pem
+            auto tmpJobName = mJobName;
+            for (auto& c : tmpJobName) {
+                c = (c == '/') ? '_' : c;
+            }
+            string caFile = "/tmp/" + tmpJobName + "_ca.pem";
+            string errMsg;
+            if (!WriteFile(caFile, tmpCA, errMsg)) {
+                LOG_ERROR(sLogger, ("write ca file failed", caFile)("errMsg", errMsg));
+                return false;
+            }
+            mTLS.mCaFile = caFile;
+        } else {
+            LOG_ERROR(sLogger, ("tls config error", ""));
+            return false;
+        }
+    }
+    if (tlsConfig.isMember(prometheus::CERT)) {
+        if (tlsConfig[prometheus::CERT].isString()) {
+            auto tmpCert = tlsConfig[prometheus::CERT].asString();
+            // write to /tmp/job_name_cert.pem
+            auto tmpJobName = mJobName;
+            for (auto& c : tmpJobName) {
+                c = (c == '/') ? '_' : c;
+            }
+            string certFile = "/tmp/" + tmpJobName + "_cert.pem";
+            string errMsg;
+            if (!WriteFile(certFile, tmpCert, errMsg)) {
+                LOG_ERROR(sLogger, ("write cert file failed", certFile)("errMsg", errMsg));
+                return false;
+            }
+            mTLS.mCertFile = certFile;
+        } else {
+            LOG_ERROR(sLogger, ("tls config error", ""));
+            return false;
+        }
+    }
+    if (tlsConfig.isMember(prometheus::KEY)) {
+        if (tlsConfig[prometheus::KEY].isString()) {
+            auto tmpKey = tlsConfig[prometheus::KEY].asString();
+            // write to /tmp/job_name_key.crt
+            auto tmpJobName = mJobName;
+            for (auto& c : tmpJobName) {
+                c = (c == '/') ? '_' : c;
+            }
+            string keyFile = "/tmp/" + tmpJobName + "_key.pem";
+            string errMsg;
+            if (!WriteFile(keyFile, tmpKey, errMsg)) {
+                LOG_ERROR(sLogger, ("write key file failed", keyFile)("errMsg", errMsg));
+                return false;
+            }
+            mTLS.mKeyFile = keyFile;
         } else {
             LOG_ERROR(sLogger, ("tls config error", ""));
             return false;
