@@ -571,6 +571,33 @@ xxx
 Q==
 -----END PRIVATE KEY-----)";
     APSARA_TEST_EQUAL(content, data);
+
+    // test update
+    configStr = R"JSON({
+            "job_name": "test_job",
+            "scrape_interval": "30s",
+            "scrape_timeout": "30s",
+            "metrics_path": "/metrics",
+            "scheme": "http",
+            "tls_config": {
+                "ca": "-----BEGIN CERTIFICATE-----
+HdL2lWHDj89WNrvywIlxQC5hRiQIO3EbUYVFUH/skbqehQ==",
+                "insecure_skip_verify": true
+            }
+        })JSON";
+    APSARA_TEST_TRUE(ParseJsonTable(configStr, config, errorMsg));
+    APSARA_TEST_TRUE(scrapeConfig.Init(config));
+    APSARA_TEST_EQUAL(true, scrapeConfig.mEnableTLS);
+    APSARA_TEST_EQUAL("/tmp/test_job_ca.pem", scrapeConfig.mTLS.mCaFile);
+    APSARA_TEST_EQUAL("", scrapeConfig.mTLS.mCertFile);
+    APSARA_TEST_EQUAL("", scrapeConfig.mTLS.mKeyFile);
+    APSARA_TEST_EQUAL(true, scrapeConfig.mTLS.mInsecureSkipVerify);
+
+    data.clear();
+    APSARA_TEST_TRUE(ReadFile("/tmp/test_job_ca.pem", data));
+    content = R"(-----BEGIN CERTIFICATE-----
+HdL2lWHDj89WNrvywIlxQC5hRiQIO3EbUYVFUH/skbqehQ==)";
+    APSARA_TEST_EQUAL(content, data);
 }
 
 UNIT_TEST_CASE(ScrapeConfigUnittest, TestInit);

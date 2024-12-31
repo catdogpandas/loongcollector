@@ -353,6 +353,9 @@ void ScrapeConfig::InitEnableCompression(bool enableCompression) {
 }
 
 bool ScrapeConfig::InitTLSConfig(const Json::Value& tlsConfig) {
+    mTLS.mCaFile.clear();
+    mTLS.mCertFile.clear();
+    mTLS.mKeyFile.clear();
     if (tlsConfig.isMember(prometheus::CA_FILE) && tlsConfig.isMember(prometheus::CA)) {
         LOG_ERROR(sLogger, ("tls config error", "ca_file and ca both set"));
         return false;
