@@ -866,7 +866,8 @@ SLSResponse DiskBufferWriter::SendBufferFileData(const sls_logs::LogtailBufferMe
     } else {
         dataType = RawDataType::EVENT_GROUP;
     }
-    if (bufferMeta.has_telemetrytype() && bufferMeta.telemetrytype() == sls_logs::SLS_TELEMETRY_TYPE_METRICS) {
+    if (bufferMeta.has_telemetrytype() && bufferMeta.telemetrytype() == sls_logs::SLS_TELEMETRY_TYPE_METRICS
+        && dataType == RawDataType::EVENT_GROUP) {
         return PostMetricStoreLogs(accessKeyId,
                                    accessKeySecret,
                                    type,
