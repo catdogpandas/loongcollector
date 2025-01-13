@@ -656,15 +656,19 @@ bool FlusherSLS::BuildRequest(SenderQueueItem* item, unique_ptr<HttpSinkRequest>
     data->mCurrentHost = host;
 #endif
 
-    switch (mTelemetryType) {
-        case sls_logs::SLS_TELEMETRY_TYPE_LOGS:
-            req = CreatePostLogStoreLogsRequest(accessKeyId, accessKeySecret, type, data);
-            break;
-        case sls_logs::SLS_TELEMETRY_TYPE_METRICS:
-            req = CreatePostMetricStoreLogsRequest(accessKeyId, accessKeySecret, type, data);
-            break;
-        default:
-            break;
+    if (data->mType == RawDataType::EVENT_GROUP) {
+        switch (mTelemetryType) {
+            case sls_logs::SLS_TELEMETRY_TYPE_LOGS:
+                req = CreatePostLogStoreLogsRequest(accessKeyId, accessKeySecret, type, data);
+                break;
+            case sls_logs::SLS_TELEMETRY_TYPE_METRICS:
+                req = CreatePostMetricStoreLogsRequest(accessKeyId, accessKeySecret, type, data);
+                break;
+            default:
+                break;
+        }
+    } else {
+        req = CreatePostLogStoreLogsRequest(accessKeyId, accessKeySecret, type, data);
     }
     return true;
 }
