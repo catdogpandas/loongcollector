@@ -38,8 +38,11 @@ protected:
 
 private:
     BatchedEvents CreateBatchedLogEvents(bool enableNanosecond, bool emptyContent);
-    BatchedEvents
-    CreateBatchedMetricEvents(bool enableNanosecond, uint32_t nanoTimestamp, bool emptyValue, bool onlyOneTag);
+    BatchedEvents CreateBatchedMetricEvents(bool enableNanosecond,
+                                            uint32_t nanoTimestamp,
+                                            bool emptyValue,
+                                            bool onlyOneTag,
+                                            bool withUnStandardTimestamp = false);
     BatchedEvents CreateBatchedRawEvents(bool enableNanosecond, bool emptyContent);
     BatchedEvents CreateBatchedSpanEvents();
 
@@ -114,6 +117,32 @@ void SLSSerializerUnittest::TestSerializeEventGroup() {
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(0).value(), "key1#$#value1");
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(1).key(), "__time_nano__");
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(1).value(), "1234567890");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(2).key(), "__value__");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(2).value(), "0.100000");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(3).key(), "__name__");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(3).value(), "test_gauge");
+            APSARA_TEST_EQUAL(1, logGroup.logtags_size());
+            APSARA_TEST_STREQ("__pack_id__", logGroup.logtags(0).key().c_str());
+            APSARA_TEST_STREQ("pack_id", logGroup.logtags(0).value().c_str());
+            APSARA_TEST_STREQ("machine_uuid", logGroup.machineuuid().c_str());
+            APSARA_TEST_STREQ("source", logGroup.source().c_str());
+            APSARA_TEST_STREQ("topic", logGroup.topic().c_str());
+        }
+        { // with unstandard timestamp
+            string res, errorMsg;
+            APSARA_TEST_TRUE(
+                serializer.DoSerialize(CreateBatchedMetricEvents(false, 0, false, true, true), res, errorMsg));
+            sls_logs::LogGroup logGroup;
+            APSARA_TEST_TRUE(logGroup.ParseFromString(res));
+
+            APSARA_TEST_EQUAL(1, logGroup.logs_size());
+            APSARA_TEST_EQUAL(268435456U, logGroup.logs(0).time());
+            APSARA_TEST_FALSE(logGroup.logs(0).has_time_ns());
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents_size(), 4);
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(0).key(), "__labels__");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(0).value(), "key1#$#value1");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(1).key(), "__time_nano__");
+            APSARA_TEST_EQUAL(logGroup.logs(0).contents(1).value(), "0000000123");
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(2).key(), "__value__");
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(2).value(), "0.100000");
             APSARA_TEST_EQUAL(logGroup.logs(0).contents(3).key(), "__name__");
@@ -403,10 +432,8 @@ BatchedEvents SLSSerializerUnittest::CreateBatchedLogEvents(bool enableNanosecon
 }
 
 
-BatchedEvents SLSSerializerUnittest::CreateBatchedMetricEvents(bool enableNanosecond,
-                                                               uint32_t nanoTimestamp,
-                                                               bool emptyValue,
-                                                               bool onlyOneTag) {
+BatchedEvents SLSSerializerUnittest::CreateBatchedMetricEvents(
+    bool enableNanosecond, uint32_t nanoTimestamp, bool emptyValue, bool onlyOneTag, bool withUnstandardTimestamp) {
     PipelineEventGroup group(make_shared<SourceBuffer>());
     group.SetTag(LOG_RESERVED_KEY_TOPIC, "topic");
     group.SetTag(LOG_RESERVED_KEY_SOURCE, "source");
@@ -421,7 +448,9 @@ BatchedEvents SLSSerializerUnittest::CreateBatchedMetricEvents(bool enableNanose
     if (!onlyOneTag) {
         e->SetTag(string("key2"), string("value2"));
     }
-    if (enableNanosecond) {
+    if (withUnstandardTimestamp) {
+        e->SetTimestamp(123);
+    } else if (enableNanosecond) {
         e->SetTimestamp(1234567890, nanoTimestamp);
     } else {
         e->SetTimestamp(1234567890);
