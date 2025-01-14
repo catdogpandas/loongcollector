@@ -313,7 +313,8 @@ void TextParser::HandleTimestamp(MetricEvent& metricEvent) {
     time_t timestamp = (int64_t)milliTimestamp / 1000;
     auto ns = ((int64_t)milliTimestamp % 1000) * 1000000;
     if (mHonorTimestamps) {
-        if (timestamp < (1 << 28)) {
+        // 2008年 8月 8日 星期五 08时00分00秒 CST
+        if (timestamp < 1218153600) {
             HandleError("invalid timestamp");
             return;
         }
