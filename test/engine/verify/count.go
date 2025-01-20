@@ -136,7 +136,7 @@ func MetricCheck(ctx context.Context, expect int, duration int64, checker func([
 			lastScrapeTime := int32(currTime - duration)
 			if enableExactlyCheck {
 				expect = int(int32(currTime)-startTime) / int(duration)
-				lastScrapeTime = int32(startTime)
+				lastScrapeTime = startTime
 			}
 			println("MetricCheck: expect", expect, "duration", duration, "lastScrapeTime", lastScrapeTime)
 			groups, err = subscriber.TestSubscriber.GetData(control.GetQuery(ctx), lastScrapeTime)
