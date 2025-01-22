@@ -218,7 +218,7 @@ void LogGroupSerializer::AddLogContentMetricTimeNano(const MetricEvent& e) {
     mRes.push_back(0x12);
     uint32_pack(valueSZ, mRes);
     // TODO: avoid copy
-    mRes.append(NumberToDigitString(e.GetTimestamp(), 10));
+    mRes.append(to_string(e.GetTimestamp()));
     if (e.GetTimestampNanosecond()) {
         mRes.append(NumberToDigitString(e.GetTimestampNanosecond().value(), 9));
     }

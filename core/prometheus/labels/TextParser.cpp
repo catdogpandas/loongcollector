@@ -288,7 +288,7 @@ void TextParser::HandleTimestamp(MetricEvent& metricEvent) {
 
     auto tmpTimestamp = mLine.substr(mPos - mTokenLength, mTokenLength);
     if (tmpTimestamp.size() == 0) {
-        HandleError("need timestamp");
+        mState = TextState::Done;
         return;
     }
     mDoubleStr = tmpTimestamp.to_string();
