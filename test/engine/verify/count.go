@@ -123,7 +123,6 @@ func MetricCheck(ctx context.Context, expect int, duration int64, checker func([
 		startTime = value.(int32)
 		enableExactlyCheck = true
 	}
-	println("MetricCheck: startTime", startTime, enableExactlyCheck)
 	timeoutCtx, cancel := context.WithTimeout(context.TODO(), config.TestConfig.RetryTimeout)
 	defer cancel()
 	var groups []*protocol.LogGroup
@@ -138,7 +137,6 @@ func MetricCheck(ctx context.Context, expect int, duration int64, checker func([
 				expect = int(int32(currTime)-startTime) / int(duration)
 				lastScrapeTime = startTime
 			}
-			println("MetricCheck: expect", expect, "duration", duration, "lastScrapeTime", lastScrapeTime)
 			groups, err = subscriber.TestSubscriber.GetData(control.GetQuery(ctx), lastScrapeTime)
 			if err != nil {
 				return err
