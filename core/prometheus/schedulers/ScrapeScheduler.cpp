@@ -94,7 +94,10 @@ void ScrapeScheduler::OnMetricResult(HttpResponse& response, uint64_t) {
     auto mScrapeDurationSeconds = scrapeDurationMilliSeconds * sRate;
     auto mUpState = response.GetStatusCode() == 200;
     streamScraper->mStreamIndex++;
-    streamScraper->FlushCache();
+    
+    if (mUpState) {
+        streamScraper->FlushCache();
+    }
     streamScraper->SetAutoMetricMeta(mScrapeDurationSeconds, mUpState, scrapeState);
     streamScraper->SendMetrics();
     streamScraper->Reset();
