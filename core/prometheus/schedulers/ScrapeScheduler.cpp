@@ -73,7 +73,7 @@ void ScrapeScheduler::OnMetricResult(HttpResponse& response, uint64_t) {
 
     const auto& networkStatus = response.GetNetworkStatus();
     string scrapeState;
-    mUpState =false;
+    mUpState = false;
     if (networkStatus.mCode != NetworkCode::Ok) {
         // not 0 means curl error
         scrapeState = prom::NetworkCodeToState(networkStatus.mCode);
@@ -94,7 +94,7 @@ void ScrapeScheduler::OnMetricResult(HttpResponse& response, uint64_t) {
 
     auto mScrapeDurationSeconds = scrapeDurationMilliSeconds * sRate;
     streamScraper->mStreamIndex++;
-    
+
     if (mUpState) {
         streamScraper->FlushCache();
     }
