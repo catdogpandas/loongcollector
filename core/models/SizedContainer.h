@@ -26,6 +26,7 @@ namespace logtail {
 // TODO: Be a complete wrapper of the original container
 
 class SizedMap {
+    friend class ProcessorPromRelabelMetricNative;
 public:
     void Insert(StringView key, StringView val) {
         auto iter = mInner.find(key);

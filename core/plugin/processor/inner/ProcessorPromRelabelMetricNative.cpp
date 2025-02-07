@@ -16,14 +16,14 @@
 #include "plugin/processor/inner/ProcessorPromRelabelMetricNative.h"
 
 #include <cstddef>
-
-#include "json/json.h"
+#include <json/json.h>
 
 #include "common/Flags.h"
 #include "common/StringTools.h"
 #include "models/MetricEvent.h"
 #include "models/PipelineEventGroup.h"
 #include "models/PipelineEventPtr.h"
+#include "models/SizedContainer.h"
 #include "prometheus/Constants.h"
 
 using namespace std;
@@ -50,13 +50,12 @@ bool ProcessorPromRelabelMetricNative::Init(const Json::Value& config) {
 void ProcessorPromRelabelMetricNative::Process(PipelineEventGroup& metricGroup) {
     // if mMetricRelabelConfigs is empty and honor_labels is true, skip it
     auto targetTags = metricGroup.GetTags();
-    auto toDelete = GetToDeleteTargetLabels(targetTags);
 
     if (!mScrapeConfigPtr->mMetricRelabelConfigs.Empty() || !targetTags.empty()) {
         EventsContainer& events = metricGroup.MutableEvents();
         size_t wIdx = 0;
         for (size_t rIdx = 0; rIdx < events.size(); ++rIdx) {
-            if (ProcessEvent(events[rIdx], targetTags, toDelete)) {
+            if (ProcessEvent(events[rIdx], targetTags)) {
                 if (wIdx != rIdx) {
                     events[wIdx] = std::move(events[rIdx]);
                 }
@@ -66,17 +65,11 @@ void ProcessorPromRelabelMetricNative::Process(PipelineEventGroup& metricGroup) 
         events.resize(wIdx);
     }
 
-    // delete mTags when key starts with __
-    for (const auto& k : toDelete) {
-        metricGroup.DelTag(k);
-    }
-
     if (metricGroup.HasMetadata(EventGroupMetaKey::PROMETHEUS_STREAM_TOTAL)) {
         auto autoMetric = prom::AutoMetric();
         UpdateAutoMetrics(metricGroup, autoMetric);
         AddAutoMetrics(metricGroup, autoMetric);
     }
-
 
     // delete all tags
     for (const auto& [k, v] : targetTags) {
@@ -88,42 +81,46 @@ bool ProcessorPromRelabelMetricNative::IsSupportedEvent(const PipelineEventPtr& 
     return e.Is<MetricEvent>();
 }
 
-bool ProcessorPromRelabelMetricNative::ProcessEvent(PipelineEventPtr& e,
-                                                    const GroupTags& targetTags,
-                                                    const vector<StringView>& toDelete) {
+bool ProcessorPromRelabelMetricNative::ProcessEvent(PipelineEventPtr& e, const GroupTags& targetTags) {
     if (!IsSupportedEvent(e)) {
         return false;
     }
     auto& sourceEvent = e.Cast<MetricEvent>();
 
+    auto& eventTags = sourceEvent.GetTags();
+
     for (const auto& [k, v] : targetTags) {
-        if (sourceEvent.HasTag(k)) {
+        auto it = eventTags.mInner.find(k);
+        if (it != eventTags.mInner.end()) {
             if (!mScrapeConfigPtr->mHonorLabels) {
                 // metric event labels is secondary
                 // if confiliction, then rename it exported_<label_name>
                 auto key = prometheus::EXPORTED_PREFIX + k.to_string();
                 auto b = sourceEvent.GetSourceBuffer()->CopyString(key);
-                sourceEvent.SetTagNoCopy(StringView(b.data, b.size), sourceEvent.GetTag(k));
-                sourceEvent.SetTagNoCopy(k, v);
+                eventTags.mInner[StringView(b.data, b.size)] = it->second;
+                it->second = v;
+                eventTags.mAllocatedSize += b.size + v.size();
             }
         } else {
-            sourceEvent.SetTagNoCopy(k, v);
+            eventTags.mInner[k] = v;
+            eventTags.mAllocatedSize += k.size() + v.size();
         }
     }
 
-    vector<string> toDeleteInRelabel;
     if (!mScrapeConfigPtr->mMetricRelabelConfigs.Empty()
-        && !mScrapeConfigPtr->mMetricRelabelConfigs.Process(sourceEvent, toDeleteInRelabel)) {
+        && !mScrapeConfigPtr->mMetricRelabelConfigs.Process(sourceEvent)) {
         return false;
     }
     // set metricEvent name
     sourceEvent.SetNameNoCopy(sourceEvent.GetTag(prometheus::NAME));
 
-    for (const auto& k : toDelete) {
-        sourceEvent.DelTag(k);
-    }
-    for (const auto& k : toDeleteInRelabel) {
-        sourceEvent.DelTag(k);
+    for (auto it = eventTags.mInner.begin(); it != eventTags.mInner.end();) {
+        if (it->first.rfind("__", 0) == 0) {
+            it = eventTags.mInner.erase(it);
+            eventTags.mAllocatedSize -= it->first.size() + it->second.size();
+        } else {
+            ++it;
+        }
     }
 
     for (const auto& [k, v] : mScrapeConfigPtr->mExternalLabels) {
@@ -145,17 +142,6 @@ bool ProcessorPromRelabelMetricNative::ProcessEvent(PipelineEventPtr& e,
     sourceEvent.SetTagNoCopy(prometheus::NAME, sourceEvent.GetName());
 
     return true;
-}
-
-vector<StringView> ProcessorPromRelabelMetricNative::GetToDeleteTargetLabels(const GroupTags& targetTags) const {
-    // delete tag which starts with __
-    vector<StringView> toDelete;
-    for (const auto& [k, v] : targetTags) {
-        if (k.starts_with("__")) {
-            toDelete.push_back(k);
-        }
-    }
-    return toDelete;
 }
 
 void ProcessorPromRelabelMetricNative::UpdateAutoMetrics(const PipelineEventGroup& eGroup,
@@ -247,6 +233,9 @@ void ProcessorPromRelabelMetricNative::AddMetric(PipelineEventGroup& metricGroup
     metricEvent->SetTimestamp(timestamp, nanoSec);
     metricEvent->SetTag(prometheus::NAME, name);
     for (const auto& [k, v] : targetTags) {
+        if (k.starts_with("__")) {
+            continue;
+        }
         metricEvent->SetTag(k, v);
     }
 }

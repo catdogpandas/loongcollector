@@ -78,6 +78,7 @@ public:
     void SetTagNoCopy(const StringBuffer& key, const StringBuffer& val);
     void SetTagNoCopy(StringView key, StringView val);
     void DelTag(StringView key);
+    SizedMap& GetTags() { return mTags; }
 
     std::map<StringView, StringView>::const_iterator TagsBegin() const { return mTags.mInner.begin(); }
     std::map<StringView, StringView>::const_iterator TagsEnd() const { return mTags.mInner.end(); }
