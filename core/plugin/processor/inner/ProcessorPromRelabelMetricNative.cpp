@@ -90,11 +90,12 @@ bool ProcessorPromRelabelMetricNative::ProcessEvent(PipelineEventPtr& e, const G
     auto& eventTags = sourceEvent.GetTags();
 
     for (const auto& [k, v] : targetTags) {
-        auto it = eventTags.mInner.find(k);
-        if (it != eventTags.mInner.end()) {
+        auto res = eventTags.mInner.try_emplace(k, v);
+        if (!res.second) {
             if (!mScrapeConfigPtr->mHonorLabels) {
                 // metric event labels is secondary
                 // if confiliction, then rename it exported_<label_name>
+                auto it = eventTags.mInner.find(k);
                 auto key = prometheus::EXPORTED_PREFIX + k.to_string();
                 auto b = sourceEvent.GetSourceBuffer()->CopyString(key);
                 eventTags.mInner[StringView(b.data, b.size)] = it->second;
@@ -102,7 +103,6 @@ bool ProcessorPromRelabelMetricNative::ProcessEvent(PipelineEventPtr& e, const G
                 eventTags.mAllocatedSize += b.size + v.size();
             }
         } else {
-            eventTags.mInner[k] = v;
             eventTags.mAllocatedSize += k.size() + v.size();
         }
     }
