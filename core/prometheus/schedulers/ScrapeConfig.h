@@ -3,6 +3,7 @@
 #include <cstdint>
 
 #include <map>
+#include <mutex>
 #include <string>
 #include <vector>
 
@@ -49,8 +50,16 @@ public:
     ScrapeConfig();
     bool Init(const Json::Value& config);
     bool InitStaticConfig(const Json::Value& config);
+    bool UpdateAuthorization();
 
 private:
+    std::mutex mAuthMutex;
+    std::string mAuthType;
+    std::string mBearerTokenPath;
+    std::string mBasicNamePath;
+    std::string mBasicPasswordPath;
+    uint64_t mLastUpdateTime;
+
     bool InitBasicAuth(const Json::Value& basicAuth);
     bool InitAuthorization(const Json::Value& authorization);
     bool InitScrapeProtocols(const Json::Value& scrapeProtocols);
