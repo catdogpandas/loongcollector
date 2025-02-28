@@ -288,6 +288,7 @@ bool ScrapeConfig::InitAuthorization(const Json::Value& authorization) {
 
 // the return value is true if the authorization is updated
 bool ScrapeConfig::UpdateAuthorization() {
+    LOG_INFO(sLogger, (mJobName, "starte update authorization"));
     lock_guard<mutex> lock(mAuthMutex);
     auto currTime = GetCurrentTimeInMilliSeconds();
     if (mAuthType.empty() || currTime - mLastUpdateTime < 5 * 60 * 1000) {
@@ -326,6 +327,7 @@ bool ScrapeConfig::UpdateAuthorization() {
         return false;
     }
     mRequestHeaders[prometheus::A_UTHORIZATION] = credentials;
+    LOG_INFO(sLogger, (mJobName, "authorization updated"));
     return true;
 }
 

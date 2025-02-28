@@ -46,6 +46,7 @@ public:
     std::string mQueryString;
 
     std::vector<std::pair<std::string, std::string>> mExternalLabels;
+    uint64_t mLastUpdateTime;
 
     ScrapeConfig();
     bool Init(const Json::Value& config);
@@ -58,7 +59,6 @@ private:
     std::string mBearerTokenPath;
     std::string mBasicNamePath;
     std::string mBasicPasswordPath;
-    uint64_t mLastUpdateTime;
 
     bool InitBasicAuth(const Json::Value& basicAuth);
     bool InitAuthorization(const Json::Value& authorization);
