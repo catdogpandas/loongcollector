@@ -1,5 +1,6 @@
 #pragma once
 
+#include <chrono>
 #include <cstdint>
 
 #include <map>
@@ -46,7 +47,7 @@ public:
     std::string mQueryString;
 
     std::vector<std::pair<std::string, std::string>> mExternalLabels;
-    uint64_t mLastUpdateTime;
+    std::chrono::system_clock::time_point mLastUpdateTime;
 
     ScrapeConfig();
     bool Init(const Json::Value& config);

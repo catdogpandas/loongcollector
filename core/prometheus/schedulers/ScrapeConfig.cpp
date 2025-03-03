@@ -1,6 +1,8 @@
 
 #include "prometheus/schedulers/ScrapeConfig.h"
 
+#include <chrono>
+
 #include <mutex>
 #include <string>
 
@@ -28,8 +30,7 @@ ScrapeConfig::ScrapeConfig()
       mEnableTLS(false),
       mMaxScrapeSizeBytes(0),
       mSampleLimit(0),
-      mSeriesLimit(0),
-      mLastUpdateTime(0) {
+      mSeriesLimit(0) {
 }
 
 bool ScrapeConfig::Init(const Json::Value& scrapeConfig) {
@@ -290,8 +291,8 @@ bool ScrapeConfig::InitAuthorization(const Json::Value& authorization) {
 bool ScrapeConfig::UpdateAuthorization() {
     LOG_INFO(sLogger, (mJobName, "starte update authorization"));
     lock_guard<mutex> lock(mAuthMutex);
-    auto currTime = GetCurrentTimeInMilliSeconds();
-    if (mAuthType.empty() || currTime - mLastUpdateTime < 5 * 60 * 1000) {
+    auto currTime = chrono::system_clock::now();
+    if (mAuthType.empty() || chrono::duration_cast<chrono::minutes>(currTime - mLastUpdateTime).count() < 5) {
         return false;
     }
     mLastUpdateTime = currTime;
