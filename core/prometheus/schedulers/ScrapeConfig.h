@@ -70,6 +70,7 @@ private:
 
 #ifdef APSARA_UNIT_TEST_MAIN
     friend class ScrapeConfigUnittest;
+    friend class ScrapeSchedulerUnittest;
 #endif
 };
 
