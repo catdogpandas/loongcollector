@@ -256,7 +256,8 @@ void ScrapeConfigUnittest::TestBasicAuth() {
 
     APSARA_TEST_TRUE(ParseJsonTable(configStr, config, errorMsg));
     APSARA_TEST_TRUE(scrapeConfig.Init(config));
-    APSARA_TEST_EQUAL(scrapeConfig.mRequestHeaders["Authorization"], "Basic dGVzdF9wYXNzd29yZC5maWxlOnRlc3RfcGFzc3dvcmQuZmlsZQ==");
+    APSARA_TEST_EQUAL(scrapeConfig.mRequestHeaders["Authorization"],
+                      "Basic dGVzdF9wYXNzd29yZC5maWxlOnRlc3RfcGFzc3dvcmQuZmlsZQ==");
 
     OverwriteFile(mFilePath, "new key");
     scrapeConfig.mRequestHeaders.clear();
