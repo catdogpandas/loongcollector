@@ -17,7 +17,7 @@
 #include "runner/ProcessorRunner.h"
 
 DEFINE_FLAG_INT64(prom_stream_bytes_size, "stream bytes size", 1024 * 1024);
-DEFINE_FLAG_INT64(prom_max_sample_length, "stream bytes size", 8 * 1024);
+DEFINE_FLAG_INT64(prom_max_sample_length, "max sample length", 8 * 1024);
 
 DEFINE_FLAG_BOOL(enable_prom_stream_scrape, "enable prom stream scrape", true);
 
