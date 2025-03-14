@@ -16,9 +16,9 @@
 
 #include "prometheus/schedulers/ScrapeScheduler.h"
 
-#include <chrono>
 #include <cstddef>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <utility>

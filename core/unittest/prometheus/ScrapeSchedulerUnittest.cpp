@@ -14,14 +14,13 @@
  * limitations under the License.
  */
 
-#include <chrono>
 #include <unistd.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 
 #include "FileSystemUtil.h"
-#include "common/StringTools.h"
 #include "common/http/Curl.h"
 #include "common/http/HttpResponse.h"
 #include "common/timer/Timer.h"

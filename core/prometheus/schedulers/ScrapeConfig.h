@@ -1,8 +1,8 @@
 #pragma once
 
-#include <chrono>
 #include <cstdint>
 
+#include <chrono>
 #include <map>
 #include <mutex>
 #include <string>

@@ -2,13 +2,11 @@
 #include "prometheus/schedulers/ScrapeConfig.h"
 
 #include <chrono>
-
 #include <mutex>
 #include <string>
 
 #include "json/value.h"
 
-#include "TimeUtil.h"
 #include "common/EncodingUtil.h"
 #include "common/FileSystemUtil.h"
 #include "common/StringTools.h"
@@ -289,13 +287,13 @@ bool ScrapeConfig::InitAuthorization(const Json::Value& authorization) {
 
 // the return value is true if the authorization is updated
 bool ScrapeConfig::UpdateAuthorization() {
-    LOG_INFO(sLogger, (mJobName, "starte update authorization"));
     lock_guard<mutex> lock(mAuthMutex);
     auto currTime = chrono::system_clock::now();
     if (mAuthType.empty() || chrono::duration_cast<chrono::minutes>(currTime - mLastUpdateTime).count() < 5) {
         return false;
     }
     mLastUpdateTime = currTime;
+    LOG_INFO(sLogger, (mJobName, "starte update authorization"));
 
     string credentials;
     if (mAuthType == prometheus::BASIC_PREFIX) {
