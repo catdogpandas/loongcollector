@@ -107,7 +107,7 @@ void StreamScraper::SetTargetLabels(PipelineEventGroup& eGroup) const {
     mTargetLabels.Range([&eGroup](const std::string& key, const std::string& value) { eGroup.SetTag(key, value); });
 }
 
-void StreamScraper::PushEventGroup(PipelineEventGroup&& eGroup) const {
+bool StreamScraper::PushEventGroup(PipelineEventGroup&& eGroup) const {
     auto item = make_unique<ProcessQueueItem>(std::move(eGroup), mInputIndex);
 #ifdef APSARA_UNIT_TEST_MAIN
     mItem.emplace_back(std::move(item));
@@ -115,10 +115,10 @@ void StreamScraper::PushEventGroup(PipelineEventGroup&& eGroup) const {
 #endif
     int i = 0;
     QueueStatus res = QueueStatus::QUEUE_FULL;
-    while (i++ < 1000) {
+    while (i++ < 100) {
         res = ProcessQueueManager::GetInstance()->PushQueue(mQueueKey, std::move(item));
         if (res == QueueStatus::OK) {
-            break;
+            return true;
         }
         if (res == QueueStatus::QUEUE_NOT_EXIST) {
             LOG_DEBUG(sLogger, ("prometheus stream scraper", "queue not exist"));
@@ -129,6 +129,7 @@ void StreamScraper::PushEventGroup(PipelineEventGroup&& eGroup) const {
     if (res == QueueStatus::QUEUE_FULL) {
         LOG_DEBUG(sLogger, ("prometheus stream scraper", "queue is full"));
     }
+    return false;
 }
 
 void StreamScraper::SendMetrics() {
@@ -137,7 +138,9 @@ void StreamScraper::SendMetrics() {
     mEventGroup.SetMetadata(EventGroupMetaKey::PROMETHEUS_STREAM_ID, GetId());
 
     SetTargetLabels(mEventGroup);
-    PushEventGroup(std::move(mEventGroup));
+    if(PushEventGroup(std::move(mEventGroup))) {
+        mSendSize += mCurrStreamSize;
+    }
     mEventGroup = PipelineEventGroup(std::make_shared<SourceBuffer>());
     mCurrStreamSize = 0;
 }
@@ -145,6 +148,7 @@ void StreamScraper::SendMetrics() {
 void StreamScraper::Reset() {
     mEventGroup = PipelineEventGroup(std::make_shared<SourceBuffer>());
     mRawSize = 0;
+    mSendSize = 0;
     mCurrStreamSize = 0;
     mCache.clear();
     mStreamIndex = 0;
