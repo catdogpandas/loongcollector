@@ -21,6 +21,9 @@ namespace logtail {
 template <>
 bool EventFlushStrategy<SLSEventBatchStatus>::NeedFlushByTime(const SLSEventBatchStatus& status,
                                                               const PipelineEventPtr& e) {
+    if (e.Is<MetricEvent>()) {
+        return time(nullptr) - status.GetCreateTime() > mTimeoutSecs;
+    }
     return time(nullptr) - status.GetCreateTime() > mTimeoutSecs
         || status.GetCreateTimeMinute() != e->GetTimestamp() / 60;
 }
