@@ -116,7 +116,7 @@ void SLSEventFlushStrategyUnittest::TestNeedFlush() {
     PipelineEventPtr event(eventGroup.CreateLogEvent(), false, nullptr);
     event->SetTimestamp(1717398001);
     PipelineEventPtr metricEvent(eventGroup.CreateMetricEvent(), false, nullptr);
-    metricEvent->SetTimestamp(1717398001);
+    metricEvent->SetTimestamp(time(nullptr));
 
     SLSEventBatchStatus status;
     status.mCnt = 2;
@@ -154,6 +154,10 @@ void SLSEventFlushStrategyUnittest::TestNeedFlush() {
     APSARA_TEST_FALSE(mStrategy.NeedFlushBySize(status));
     APSARA_TEST_TRUE(mStrategy.NeedFlushByTime(status, event));
     APSARA_TEST_FALSE(mStrategy.NeedFlushByTime(status, metricEvent));
+    metricEvent->SetTimestamp(time(nullptr) - 302);
+    APSARA_TEST_TRUE(mStrategy.NeedFlushByTime(status, metricEvent));
+    metricEvent->SetTimestamp(time(nullptr) + 301);
+    APSARA_TEST_TRUE(mStrategy.NeedFlushByTime(status, metricEvent));
 }
 
 UNIT_TEST_CASE(SLSEventFlushStrategyUnittest, TestNeedFlush)
