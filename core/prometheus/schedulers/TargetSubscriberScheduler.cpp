@@ -215,6 +215,13 @@ bool TargetSubscriberScheduler::ParseScrapeSchedulerGroup(const std::string& con
         }
 
         targetInfo.mLabels = labels;
+        if (element.isMember(prometheus::TARGET_HASH) && element[prometheus::TARGET_HASH].isString()) {
+            targetInfo.mHash = element[prometheus::TARGET_HASH].asString();
+        }
+
+        if (element.isMember(prometheus::REBALANCE_MS) && element[prometheus::REBALANCE_MS].isUInt64()) {
+            targetInfo.mRebalanceMs = element[prometheus::REBALANCE_MS].asUInt64();
+        }
         scrapeSchedulerGroup.push_back(targetInfo);
     }
     return true;
