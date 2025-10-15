@@ -24,6 +24,7 @@ ScrapeConfig::ScrapeConfig()
       mHonorLabels(false),
       mHonorTimestamps(true),
       mScheme("http"),
+      mHostOnlyMode(false),
       mFollowRedirects(true),
       mEnableTLS(false),
       mMaxScrapeSizeBytes(0),
@@ -192,6 +193,41 @@ bool ScrapeConfig::InitStaticConfig(const Json::Value& scrapeConfig) {
             return false;
         }
     }
+
+    if (scrapeConfig.isMember(prometheus::HOST_ONLY_MODE) && scrapeConfig[prometheus::HOST_ONLY_MODE].isBool()) {
+        mHostOnlyMode = scrapeConfig[prometheus::HOST_ONLY_MODE].asBool();
+    }
+    if (mHostOnlyMode) {
+        if (scrapeConfig.isMember(prometheus::STATIC_CONFIGS) && scrapeConfig[prometheus::STATIC_CONFIGS].isArray()) {
+            for (const auto& tmp : scrapeConfig[prometheus::STATIC_CONFIGS]) {
+                auto tmpHostOnlyConfig = HostOnlyConfig();
+                if (tmp.isMember(prometheus::TARGETS) && tmp[prometheus::TARGETS].isArray()) {
+                    for (const auto& target : tmp[prometheus::TARGETS]) {
+                        if (target.isString()) {
+                            tmpHostOnlyConfig.mTargets.emplace(target.asString());
+                        } else {
+                            LOG_ERROR(sLogger, ("target config error", ""));
+                            return false;
+                        }
+                    }
+                }
+                if (tmp.isMember(prometheus::LABELS) && tmp[prometheus::LABELS].isArray()) {
+                    for (const auto& label : tmp[prometheus::LABELS]) {
+                        if (label.isString() && label.asString().find(':') != string::npos) {
+                            auto tmpLabel = label.asString().substr(0, label.asString().find(':'));
+                            auto tmpValue = label.asString().substr(label.asString().find(':') + 1);
+                            tmpHostOnlyConfig.mLabels.Set(tmpLabel, tmpValue);
+                        } else {
+                            LOG_ERROR(sLogger, ("label config error", ""));
+                            return false;
+                        }
+                    }
+                }
+                mHostOnlyConfigs.push_back(tmpHostOnlyConfig);
+            }
+        }
+    }
+
     return true;
 }
 

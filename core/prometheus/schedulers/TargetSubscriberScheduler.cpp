@@ -90,6 +90,20 @@ void TargetSubscriberScheduler::OnSubscription(HttpResponse& response, uint64_t 
     ADD_COUNTER(mTotalDelayMs, GetCurrentTimeInMilliSeconds() - timestampMilliSec);
 }
 
+
+void TargetSubscriberScheduler::ScheduleHostOnlyTargets() {
+    mSelfMonitor->AddCounter(METRIC_PLUGIN_PROM_SUBSCRIBE_TOTAL, 200);
+
+    vector<PromTargetInfo> targetGroup;
+    BuildHostOnlyScrapeSchedulerGroup(targetGroup);
+
+    std::unordered_map<std::string, std::shared_ptr<ScrapeScheduler>> newScrapeSchedulerSet
+        = BuildScrapeSchedulerSet(targetGroup);
+    UpdateScrapeScheduler(newScrapeSchedulerSet);
+
+    SET_GAUGE(mPromSubscriberTargets, mScrapeSchedulerMap.size());
+}
+
 void TargetSubscriberScheduler::UpdateScrapeScheduler(
     std::unordered_map<std::string, std::shared_ptr<ScrapeScheduler>>& newScrapeSchedulerMap) {
     {
@@ -139,6 +153,41 @@ void TargetSubscriberScheduler::UpdateScrapeScheduler(
         }
         total = mScrapeSchedulerMap.size();
         LOG_INFO(sLogger, ("prom job", mJobName)("targets removed", toRemove.size())("added", added)("total", total));
+    }
+}
+
+void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<PromTargetInfo>& scrapeSchedulerGroup) {
+    for (const auto& hostOnlyConfig : mScrapeConfigPtr->mHostOnlyConfigs) {
+        for (const auto& target : hostOnlyConfig.mTargets) {
+            PromTargetInfo targetInfo;
+            // Parse labels https://www.robustperception.io/life-of-a-label/
+            Labels labels = hostOnlyConfig.mLabels;
+
+            // todo(liqiang): add instance by lc ecs meta interface
+            targetInfo.mInstance = target;
+
+            for (const auto& pair : mScrapeConfigPtr->mParams) {
+                if (!pair.second.empty()) {
+                    labels.Set(prometheus::PARAM_LABEL_NAME + pair.first, pair.second[0]);
+                }
+            }
+
+            if (labels.Get(prometheus::JOB).empty()) {
+                labels.Set(prometheus::JOB, mJobName);
+            }
+            if (labels.Get(prometheus::SCHEME_LABEL_NAME).empty()) {
+                labels.Set(prometheus::SCHEME_LABEL_NAME, mScrapeConfigPtr->mScheme);
+            }
+            if (labels.Get(prometheus::METRICS_PATH_LABEL_NAME).empty()) {
+                labels.Set(prometheus::METRICS_PATH_LABEL_NAME, mScrapeConfigPtr->mMetricsPath);
+            }
+            if (labels.Get(prometheus::ADDRESS_LABEL_NAME).empty()) {
+                continue;
+            }
+
+            targetInfo.mLabels = labels;
+            scrapeSchedulerGroup.push_back(targetInfo);
+        }
     }
 }
 
@@ -477,5 +526,10 @@ void TargetSubscriberScheduler::InitSelfMonitor(const MetricLabels& defaultLabel
     mTotalDelayMs = mMetricsRecordRef.CreateCounter(METRIC_PLUGIN_TOTAL_DELAY_MS);
     WriteMetrics::GetInstance()->CommitMetricsRecordRef(mMetricsRecordRef);
 }
+
+bool TargetSubscriberScheduler::IsHostOnlyMode() const {
+    return mScrapeConfigPtr->mHostOnlyMode;
+}
+
 
 } // namespace logtail

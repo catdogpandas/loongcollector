@@ -11,10 +11,16 @@
 #include "json/value.h"
 
 #include "common/http/HttpRequest.h"
+#include "prometheus/labels/Labels.h"
 #include "prometheus/labels/Relabel.h"
 
 
 namespace logtail {
+
+struct HostOnlyConfig {
+    std::set<std::string> mTargets;
+    Labels mLabels;
+};
 
 
 class ScrapeConfig {
@@ -26,6 +32,9 @@ public:
     bool mHonorLabels;
     bool mHonorTimestamps;
     std::string mScheme;
+
+    bool mHostOnlyMode;
+    std::vector<HostOnlyConfig> mHostOnlyConfigs;
 
     // auth header
     // scrape_protocols Accept header: PrometheusProto, OpenMetricsText0.0.1, OpenMetricsText1.0.0, PrometheusText0.0.4
