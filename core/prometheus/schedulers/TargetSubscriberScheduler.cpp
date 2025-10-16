@@ -96,9 +96,13 @@ void TargetSubscriberScheduler::ScheduleHostOnlyTargets() {
 
     vector<PromTargetInfo> targetGroup;
     BuildHostOnlyScrapeSchedulerGroup(targetGroup);
+    LOG_INFO(sLogger, ("TargetSubscriberScheduler", "ScheduleHostOnlyTargets")("targetGroup", targetGroup.size()));
 
     std::unordered_map<std::string, std::shared_ptr<ScrapeScheduler>> newScrapeSchedulerSet
         = BuildScrapeSchedulerSet(targetGroup);
+    LOG_INFO(sLogger,
+             ("TargetSubscriberScheduler", "BuildScrapeSchedulerSet")("newScrapeSchedulerSet",
+                                                                      newScrapeSchedulerSet.size()));
     UpdateScrapeScheduler(newScrapeSchedulerSet);
 
     SET_GAUGE(mPromSubscriberTargets, mScrapeSchedulerMap.size());
@@ -157,7 +161,13 @@ void TargetSubscriberScheduler::UpdateScrapeScheduler(
 }
 
 void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<PromTargetInfo>& scrapeSchedulerGroup) {
+    LOG_INFO(sLogger,
+             ("TargetSubscriberScheduler", "BuildHostOnlyScrapeSchedulerGroup")(
+                 "mScrapeConfigPtr->mHostOnlyConfigs", mScrapeConfigPtr->mHostOnlyConfigs.size()));
     for (const auto& hostOnlyConfig : mScrapeConfigPtr->mHostOnlyConfigs) {
+        LOG_INFO(sLogger,
+                 ("TargetSubscriberScheduler", "BuildHostOnlyScrapeSchedulerGroup")("hostOnlyConfig",
+                                                                                    hostOnlyConfig.mTargets.size()));
         for (const auto& target : hostOnlyConfig.mTargets) {
             PromTargetInfo targetInfo;
             // Parse labels https://www.robustperception.io/life-of-a-label/
@@ -165,6 +175,7 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
 
             // todo(liqiang): add instance by lc ecs meta interface
             targetInfo.mInstance = target;
+            labels.Set(prometheus::ADDRESS_LABEL_NAME, target);
 
             for (const auto& pair : mScrapeConfigPtr->mParams) {
                 if (!pair.second.empty()) {
