@@ -426,7 +426,9 @@ void TargetSubscriberScheduler::ScheduleNext() {
 }
 
 void TargetSubscriberScheduler::Cancel() {
-    mFuture->Cancel();
+    if (mFuture != nullptr) {
+        mFuture->Cancel();
+    }
     {
         WriteLock lock(mLock);
         mValidState = false;

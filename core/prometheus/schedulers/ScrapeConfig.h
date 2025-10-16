@@ -76,6 +76,7 @@ private:
     void InitEnableCompression(bool enableCompression);
     bool InitTLSConfig(const Json::Value& tlsConfig);
     bool InitExternalLabels(const Json::Value& externalLabels);
+    bool InitHostOnlyMode(const Json::Value& hostOnlyConfig);
 
 #ifdef APSARA_UNIT_TEST_MAIN
     friend class ScrapeConfigUnittest;

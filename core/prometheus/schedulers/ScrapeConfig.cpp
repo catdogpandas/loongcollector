@@ -197,34 +197,12 @@ bool ScrapeConfig::InitStaticConfig(const Json::Value& scrapeConfig) {
     if (scrapeConfig.isMember(prometheus::HOST_ONLY_MODE) && scrapeConfig[prometheus::HOST_ONLY_MODE].isBool()) {
         mHostOnlyMode = scrapeConfig[prometheus::HOST_ONLY_MODE].asBool();
     }
-    if (mHostOnlyMode) {
-        if (scrapeConfig.isMember(prometheus::STATIC_CONFIGS) && scrapeConfig[prometheus::STATIC_CONFIGS].isArray()) {
-            for (const auto& tmp : scrapeConfig[prometheus::STATIC_CONFIGS]) {
-                auto tmpHostOnlyConfig = HostOnlyConfig();
-                if (tmp.isMember(prometheus::TARGETS) && tmp[prometheus::TARGETS].isArray()) {
-                    for (const auto& target : tmp[prometheus::TARGETS]) {
-                        if (target.isString()) {
-                            tmpHostOnlyConfig.mTargets.emplace(target.asString());
-                        } else {
-                            LOG_ERROR(sLogger, ("target config error", ""));
-                            return false;
-                        }
-                    }
-                }
-                if (tmp.isMember(prometheus::LABELS) && tmp[prometheus::LABELS].isArray()) {
-                    for (const auto& label : tmp[prometheus::LABELS]) {
-                        if (label.isString() && label.asString().find(':') != string::npos) {
-                            auto tmpLabel = label.asString().substr(0, label.asString().find(':'));
-                            auto tmpValue = label.asString().substr(label.asString().find(':') + 1);
-                            tmpHostOnlyConfig.mLabels.Set(tmpLabel, tmpValue);
-                        } else {
-                            LOG_ERROR(sLogger, ("label config error", ""));
-                            return false;
-                        }
-                    }
-                }
-                mHostOnlyConfigs.push_back(tmpHostOnlyConfig);
-            }
+
+    if (mHostOnlyMode && scrapeConfig.isMember(prometheus::STATIC_CONFIGS)
+        && scrapeConfig[prometheus::STATIC_CONFIGS].isArray()) {
+        if (!InitHostOnlyMode(scrapeConfig[prometheus::STATIC_CONFIGS])) {
+            LOG_ERROR(sLogger, ("host only mode config error", ""));
+            return false;
         }
     }
 
@@ -523,6 +501,41 @@ bool ScrapeConfig::InitExternalLabels(const Json::Value& externalLabels) {
     std::sort(mExternalLabels.begin(), mExternalLabels.end(), [](const auto& lhs, const auto& rhs) {
         return lhs.first < rhs.first;
     });
+    return true;
+}
+
+
+bool ScrapeConfig::InitHostOnlyMode(const Json::Value& hostOnlyConfigs) {
+    for (const auto& tmp : hostOnlyConfigs) {
+        auto tmpHostOnlyConfig = HostOnlyConfig();
+        if (tmp.isMember(prometheus::TARGETS) && tmp[prometheus::TARGETS].isArray()) {
+            for (const auto& target : tmp[prometheus::TARGETS]) {
+                if (target.isString()) {
+                    tmpHostOnlyConfig.mTargets.emplace(target.asString());
+                } else {
+                    LOG_ERROR(sLogger, ("target config error", ""));
+                    return false;
+                }
+            }
+        }
+        if (tmp.isMember(prometheus::LABELS) && tmp[prometheus::LABELS].isObject()) {
+            set<string> dups;
+            for (auto& key : tmp[prometheus::LABELS].getMemberNames()) {
+                if (tmp[prometheus::LABELS][key].isString()) {
+                    if (dups.find(key) != dups.end()) {
+                        LOG_ERROR(sLogger, ("duplicated key in static labels", key));
+                        return false;
+                    }
+                    dups.insert(key);
+                    tmpHostOnlyConfig.mLabels.Set(key, tmp[prometheus::LABELS][key].asString());
+                } else {
+                    LOG_ERROR(sLogger, ("static labels config error", ""));
+                    return false;
+                }
+            }
+        }
+        mHostOnlyConfigs.emplace_back(std::move(tmpHostOnlyConfig));
+    }
     return true;
 }
 
