@@ -34,6 +34,7 @@ public:
     std::string mScheme;
 
     bool mHostOnlyMode;
+    bool mHostOnlyMetaLabels;
     std::vector<HostOnlyConfig> mHostOnlyConfigs;
 
     // auth header

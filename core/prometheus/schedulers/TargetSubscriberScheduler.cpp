@@ -25,6 +25,7 @@
 #include "AppConfig.h"
 #include "SelfMonitorMetricEvent.h"
 #include "common/JsonUtil.h"
+#include "common/MachineInfoUtil.h"
 #include "common/StringTools.h"
 #include "common/TimeUtil.h"
 #include "common/http/Constant.h"
@@ -173,7 +174,6 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
             // Parse labels https://www.robustperception.io/life-of-a-label/
             Labels labels = hostOnlyConfig.mLabels;
 
-            // todo(liqiang): add instance by lc ecs meta interface
             targetInfo.mInstance = target;
             labels.Set(prometheus::ADDRESS_LABEL_NAME, target);
 
@@ -192,8 +192,18 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
             if (labels.Get(prometheus::METRICS_PATH_LABEL_NAME).empty()) {
                 labels.Set(prometheus::METRICS_PATH_LABEL_NAME, mScrapeConfigPtr->mMetricsPath);
             }
-            if (labels.Get(prometheus::ADDRESS_LABEL_NAME).empty()) {
-                continue;
+
+            // add meta labels
+            if (mScrapeConfigPtr->mHostOnlyMetaLabels) {
+                const auto* entity = InstanceIdentity::Instance()->GetEntity();
+                labels.Set("_host_hostname", GetHostName());
+                labels.Set("_host_ip", GetHostIp());
+                labels.Set("_ecs_meta_instance_id", entity->GetEcsInstanceID().to_string());
+                labels.Set("_ecs_meta_region_id", entity->GetEcsRegionID().to_string());
+                labels.Set("_ecs_meta_zone_id", entity->GetEcsZoneID().to_string());
+                labels.Set("_ecs_meta_user_id", entity->GetEcsUserID().to_string());
+                labels.Set("_ecs_meta_vpc_id", entity->GetEcsVpcID().to_string());
+                labels.Set("_ecs_meta_vswitch_id", entity->GetEcsVswitchID().to_string());
             }
 
             targetInfo.mLabels = labels;
