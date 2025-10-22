@@ -146,8 +146,7 @@ void PrometheusInputRunnerUnittest::TestHostOnlyStartAndStop() {
     string errorMsg;
     string configStr;
     Json::Value config;
-    configStr = 
-    R"JSON(
+    configStr = R"JSON(
     {
         "job_name": "test_job",
         "scheme": "http",
