@@ -106,6 +106,14 @@ const char* const PARAM_LABEL_NAME = "__param_";
 const char* const LABELS = "labels";
 const char* const TARGET_HASH = "hash";
 const char* const REBALANCE_MS = "rebalance_ms";
+const char* const HOST_HOSTNAME = "__host_hostname";
+const char* const HOST_IP = "__host_ip";
+const char* const ECS_META_INSTANCE_ID = "__ecs_meta_instance_id";
+const char* const ECS_META_REGION_ID = "__ecs_meta_region_id";
+const char* const ECS_META_ZONE_ID = "__ecs_meta_zone_id";
+const char* const ECS_META_USER_ID = "__ecs_meta_user_id";
+const char* const ECS_META_VPC_ID = "__ecs_meta_vpc_id";
+const char* const ECS_META_VSWITCH_ID = "__ecs_meta_vswitch_id";
 
 // auto metrics
 const char* const SCRAPE_STATE = "scrape_state";

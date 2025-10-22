@@ -25,7 +25,6 @@ ScrapeConfig::ScrapeConfig()
       mHonorTimestamps(true),
       mScheme("http"),
       mHostOnlyMode(false),
-      mHostOnlyMetaLabels(false),
       mFollowRedirects(true),
       mEnableTLS(false),
       mMaxScrapeSizeBytes(0),
@@ -197,11 +196,6 @@ bool ScrapeConfig::InitStaticConfig(const Json::Value& scrapeConfig) {
 
     if (scrapeConfig.isMember(prometheus::HOST_ONLY_MODE) && scrapeConfig[prometheus::HOST_ONLY_MODE].isBool()) {
         mHostOnlyMode = scrapeConfig[prometheus::HOST_ONLY_MODE].asBool();
-    }
-
-    if (scrapeConfig.isMember(prometheus::HOST_ONLY_META_LABELS)
-        && scrapeConfig[prometheus::HOST_ONLY_META_LABELS].isBool()) {
-        mHostOnlyMetaLabels = scrapeConfig[prometheus::HOST_ONLY_META_LABELS].asBool();
     }
 
     if (mHostOnlyMode && scrapeConfig.isMember(prometheus::STATIC_CONFIGS)

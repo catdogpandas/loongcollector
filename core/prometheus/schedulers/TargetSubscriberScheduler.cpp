@@ -194,17 +194,15 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
             }
 
             // add meta labels
-            if (mScrapeConfigPtr->mHostOnlyMetaLabels) {
-                const auto* entity = InstanceIdentity::Instance()->GetEntity();
-                labels.Set("_host_hostname", GetHostName());
-                labels.Set("_host_ip", GetHostIp());
-                labels.Set("_ecs_meta_instance_id", entity->GetEcsInstanceID().to_string());
-                labels.Set("_ecs_meta_region_id", entity->GetEcsRegionID().to_string());
-                labels.Set("_ecs_meta_zone_id", entity->GetEcsZoneID().to_string());
-                labels.Set("_ecs_meta_user_id", entity->GetEcsUserID().to_string());
-                labels.Set("_ecs_meta_vpc_id", entity->GetEcsVpcID().to_string());
-                labels.Set("_ecs_meta_vswitch_id", entity->GetEcsVswitchID().to_string());
-            }
+            const auto* entity = InstanceIdentity::Instance()->GetEntity();
+            labels.Set(prometheus::HOST_HOSTNAME, GetHostName());
+            labels.Set(prometheus::HOST_IP, GetHostIp());
+            labels.Set(prometheus::ECS_META_INSTANCE_ID, entity->GetEcsInstanceID().to_string());
+            labels.Set(prometheus::ECS_META_REGION_ID, entity->GetEcsRegionID().to_string());
+            labels.Set(prometheus::ECS_META_ZONE_ID, entity->GetEcsZoneID().to_string());
+            labels.Set(prometheus::ECS_META_USER_ID, entity->GetEcsUserID().to_string());
+            labels.Set(prometheus::ECS_META_VPC_ID, entity->GetEcsVpcID().to_string());
+            labels.Set(prometheus::ECS_META_VSWITCH_ID, entity->GetEcsVswitchID().to_string());
 
             targetInfo.mLabels = labels;
             scrapeSchedulerGroup.push_back(targetInfo);
