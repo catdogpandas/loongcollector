@@ -76,9 +76,6 @@ void Labels::Reset(MetricEvent* metricEvent) {
 }
 
 void Labels::Set(const string& k, const string& v) {
-    if (v.empty()) {
-        return;
-    }
     if (mMetricEventPtr) {
         mMetricEventPtr->SetTag(k, v);
         return;
