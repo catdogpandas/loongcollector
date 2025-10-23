@@ -332,9 +332,9 @@ void TargetSubscriberSchedulerUnittest::TestBuildHostOnlyScrapeSchedulerGroup() 
     std::vector<PromTargetInfo> targetGroup;
     targetSubscriber->BuildHostOnlyScrapeSchedulerGroup(targetGroup);
     APSARA_TEST_EQUAL(2UL, targetGroup.size());
-    APSARA_TEST_EQUAL(targetGroup[0].mInstance, "localhost:9091");
+    APSARA_TEST_EQUAL(targetGroup[0].mInstance, "127.0.0.1:9091");
     APSARA_TEST_EQUAL(targetGroup[0].mLabels.Get("test_label"), "test_value");
-    APSARA_TEST_EQUAL(targetGroup[1].mInstance, "127.0.0.1:9090");
+    APSARA_TEST_EQUAL(targetGroup[1].mInstance, "localhost:9090");
     APSARA_TEST_EQUAL(targetGroup[1].mLabels.Get("test_label"), "test_value");
     APSARA_TEST_TRUE(targetGroup[0].mHash != targetGroup[1].mHash);
 }
