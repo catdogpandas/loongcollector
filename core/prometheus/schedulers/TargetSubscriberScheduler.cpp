@@ -176,6 +176,10 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
 
             targetInfo.mInstance = target;
             labels.Set(prometheus::ADDRESS_LABEL_NAME, target);
+            std::ostringstream rawHashStream;
+            rawHashStream << std::setw(16) << std::setfill('0') << std::hex << labels.Hash();
+            string rawAddress = labels.Get(prometheus::ADDRESS_LABEL_NAME);
+            targetInfo.mHash = mScrapeConfigPtr->mJobName + rawAddress + rawHashStream.str();
 
             for (const auto& pair : mScrapeConfigPtr->mParams) {
                 if (!pair.second.empty()) {
