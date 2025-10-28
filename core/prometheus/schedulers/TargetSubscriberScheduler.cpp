@@ -177,9 +177,9 @@ void TargetSubscriberScheduler::BuildHostOnlyScrapeSchedulerGroup(std::vector<Pr
             }
 
             // add meta labels
+            const auto* entity = InstanceIdentity::Instance()->GetEntity();
             targetInfo.mLabels.Set(prometheus::HOST_HOSTNAME, GetHostName());
             targetInfo.mLabels.Set(prometheus::HOST_IP, GetHostIp());
-            const auto* entity = InstanceIdentity::Instance()->GetEntity();
             if (entity->IsECSValid()) {
                 targetInfo.mLabels.Set(prometheus::ECS_META_INSTANCE_ID, entity->GetEcsInstanceID().to_string());
                 targetInfo.mLabels.Set(prometheus::ECS_META_REGION_ID, entity->GetEcsRegionID().to_string());
