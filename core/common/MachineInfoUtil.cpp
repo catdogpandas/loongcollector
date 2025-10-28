@@ -588,9 +588,8 @@ bool InstanceIdentity::InitFromFile() {
 
 bool InstanceIdentity::UpdateInstanceIdentity(const ECSMeta& meta) {
     // 如果 meta合法 且 (原有的meta字段不全（版本升级的情况） 或 mInstanceID 发生变化)，则更新ecs元数据
-    if (meta.IsAllValid()
-        && (!mEntity.getReadBuffer().GetECSMeta().IsAllValid()
-            || mEntity.getReadBuffer().GetEcsInstanceID() != meta.GetInstanceID())) {
+    if ((meta.IsValid() && mEntity.getReadBuffer().GetEcsInstanceID() != meta.GetInstanceID())
+        || (meta.IsAllValid() && !mEntity.getReadBuffer().GetECSMeta().IsAllValid())) {
         LOG_INFO(sLogger,
                  ("upgrade loongcollector or ecs mInstanceID changed, old mInstanceID",
                   mEntity.getReadBuffer().GetEcsInstanceID())("new mInstanceID", meta.GetInstanceID()));
