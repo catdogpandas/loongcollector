@@ -561,7 +561,7 @@ void ScrapeConfigUnittest::TestHostOnlyMode() {
             "static_configs": []
         })JSON";
     APSARA_TEST_TRUE(ParseJsonTable(configStr, config, errorMsg));
-    APSARA_TEST_TRUE(scrapeConfig1.Init(config));
+    APSARA_TEST_FALSE(scrapeConfig1.Init(config));
     APSARA_TEST_EQUAL(true, scrapeConfig1.mHostOnlyMode);
     APSARA_TEST_EQUAL(0, scrapeConfig1.mHostOnlyConfigs.size());
 

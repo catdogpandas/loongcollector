@@ -69,6 +69,7 @@ public:
 private:
     bool ParseScrapeSchedulerGroup(const std::string& content, std::vector<PromTargetInfo>& scrapeSchedulerGroup);
     void BuildHostOnlyScrapeSchedulerGroup(std::vector<PromTargetInfo>& scrapeSchedulerGroup);
+    bool BuildPromTargetInfo(const std::string& target, Labels& labels, PromTargetInfo& targetInfo);
 
     std::unordered_map<std::string, std::shared_ptr<ScrapeScheduler>>
     BuildScrapeSchedulerSet(std::vector<PromTargetInfo>& scrapeSchedulerGroup);

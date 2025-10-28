@@ -200,7 +200,7 @@ bool ScrapeConfig::InitStaticConfig(const Json::Value& scrapeConfig) {
 
     if (mHostOnlyMode && scrapeConfig.isMember(prometheus::STATIC_CONFIGS)
         && scrapeConfig[prometheus::STATIC_CONFIGS].isArray()) {
-        if (!InitHostOnlyMode(scrapeConfig[prometheus::STATIC_CONFIGS])) {
+        if (!InitHostOnlyMode(scrapeConfig[prometheus::STATIC_CONFIGS]) || mHostOnlyConfigs.empty()) {
             LOG_ERROR(sLogger, ("host only mode config error", ""));
             return false;
         }
