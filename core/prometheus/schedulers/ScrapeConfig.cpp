@@ -524,14 +524,15 @@ bool ScrapeConfig::InitHostOnlyMode(const Json::Value& hostOnlyConfigs) {
         }
         if (tmp.isMember(prometheus::LABELS) && tmp[prometheus::LABELS].isObject()) {
             set<string> dups;
-            for (auto& key : tmp[prometheus::LABELS].getMemberNames()) {
-                if (tmp[prometheus::LABELS][key].isString()) {
+            const auto& tmpLabels = tmp[prometheus::LABELS];
+            for (auto& key : tmpLabels.getMemberNames()) {
+                if (tmpLabels[key].isString()) {
                     if (dups.find(key) != dups.end()) {
                         LOG_ERROR(sLogger, ("duplicated key in static labels", key));
                         return false;
                     }
                     dups.insert(key);
-                    tmpHostOnlyConfig.mLabels.Set(key, tmp[prometheus::LABELS][key].asString());
+                    tmpHostOnlyConfig.mLabels.Set(key, tmpLabels[key].asString());
                 } else {
                     LOG_ERROR(sLogger, ("static labels config error", ""));
                     return false;
