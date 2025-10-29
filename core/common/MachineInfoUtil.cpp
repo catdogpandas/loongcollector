@@ -587,12 +587,22 @@ bool InstanceIdentity::InitFromFile() {
 }
 
 bool InstanceIdentity::UpdateInstanceIdentity(const ECSMeta& meta) {
-    // 如果 meta合法 且 (原有的meta字段不全（版本升级的情况） 或 mInstanceID 发生变化)，则更新ecs元数据
-    if ((meta.IsValid() && mEntity.getReadBuffer().GetEcsInstanceID() != meta.GetInstanceID())
-        || (meta.IsAllValid() && !mEntity.getReadBuffer().GetECSMeta().IsAllValid())) {
+    // 如果 meta合法 且 (原有的meta字段不全（版本升级的情况） 或 meta的某些字段发生变化)，则更新ecs元数据
+    if ((meta.IsValid()
+         && (mEntity.getReadBuffer().GetEcsInstanceID() != meta.GetInstanceID()
+             || mEntity.getReadBuffer().GetEcsVpcID() != meta.GetVpcID()
+             || mEntity.getReadBuffer().GetEcsVswitchID() != meta.GetVswitchID()
+             || mEntity.getReadBuffer().GetEcsZoneID() != meta.GetZoneID()
+             || mEntity.getReadBuffer().GetEcsUserID() != meta.GetUserID()
+             || mEntity.getReadBuffer().GetEcsRegionID() != meta.GetRegionID()))) {
         LOG_INFO(sLogger,
-                 ("upgrade loongcollector or ecs mInstanceID changed, old mInstanceID",
-                  mEntity.getReadBuffer().GetEcsInstanceID())("new mInstanceID", meta.GetInstanceID()));
+                 ("upgrade loongcollector or ecs meta changed, old instanceID",
+                  mEntity.getReadBuffer().GetEcsInstanceID())("new instanceID", meta.GetInstanceID())(
+                     "old vpcID", mEntity.getReadBuffer().GetEcsVpcID())("new vpcID", meta.GetVpcID())(
+                     "old vswitchID", mEntity.getReadBuffer().GetEcsVswitchID())("new vswitchID", meta.GetVswitchID())(
+                     "old zoneID", mEntity.getReadBuffer().GetEcsZoneID())("new zoneID", meta.GetZoneID())(
+                     "old userID", mEntity.getReadBuffer().GetEcsUserID())("new userID", meta.GetUserID())(
+                     "old regionID", mEntity.getReadBuffer().GetEcsRegionID())("new regionID", meta.GetRegionID()));
         mEntity.getWriteBuffer().SetECSMeta(meta);
         updateHostId(meta);
         mEntity.swap();
