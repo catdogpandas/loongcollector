@@ -122,4 +122,3 @@ flushers:
     Region": "cn-beijing"
     TelemetryType": "metrics"
 ```
-
