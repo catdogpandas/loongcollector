@@ -365,23 +365,25 @@ bool ScrapeConfig::InitScrapeProtocols(const Json::Value& scrapeProtocols) {
         return true;
     };
 
-    auto validateScrapeProtocols = [](const vector<string>& scrapeProtocols) {
+    auto validateScrapeProtocols = [](const vector<string>& scrapeProtocols) -> vector<string> {
         set<string> dups;
+        vector<string> validScrapeProtocols;
         for (const auto& scrapeProtocol : scrapeProtocols) {
             if (!sScrapeProtocolsHeaders.count(scrapeProtocol)) {
-                LOG_ERROR(sLogger,
+                LOG_WARNING(sLogger,
                           ("unknown scrape protocol prometheusproto", scrapeProtocol)(
-                              "supported",
-                              "[OpenMetricsText0.0.1 OpenMetricsText1.0.0 PrometheusProto PrometheusText0.0.4]"));
-                return false;
+                              "supported", "[OpenMetricsText0.0.1 OpenMetricsText1.0.0 PrometheusText0.0.4]"));
+                continue;
             }
             if (dups.count(scrapeProtocol)) {
-                LOG_ERROR(sLogger, ("duplicated protocol in scrape_protocols", scrapeProtocol));
-                return false;
+                LOG_WARNING(sLogger, ("duplicated protocol in scrape_protocols", scrapeProtocol));
+                continue;
             }
             dups.insert(scrapeProtocol);
+            validScrapeProtocols.push_back(scrapeProtocol);
         }
-        return true;
+
+        return validScrapeProtocols;
     };
 
     vector<string> tmpScrapeProtocols;
@@ -390,12 +392,10 @@ bool ScrapeConfig::InitScrapeProtocols(const Json::Value& scrapeProtocols) {
         return false;
     }
 
+    tmpScrapeProtocols = validateScrapeProtocols(tmpScrapeProtocols);
     // if scrape_protocols is empty, use default protocols
     if (tmpScrapeProtocols.empty()) {
         tmpScrapeProtocols = sDefaultScrapeProtocols;
-    }
-    if (!validateScrapeProtocols(tmpScrapeProtocols)) {
-        return false;
     }
 
     auto weight = tmpScrapeProtocols.size() + 1;
