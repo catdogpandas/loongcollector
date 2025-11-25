@@ -389,8 +389,8 @@ bool ScrapeConfig::InitScrapeProtocols(const Json::Value& scrapeProtocols) {
         for (const auto& scrapeProtocol : scrapeProtocols) {
             if (!sScrapeProtocolsHeaders.count(scrapeProtocol)) {
                 LOG_WARNING(sLogger,
-                          ("unknown scrape protocol prometheusproto", scrapeProtocol)(
-                              "supported", "[OpenMetricsText0.0.1 OpenMetricsText1.0.0 PrometheusText0.0.4]"));
+                            ("unknown scrape protocol prometheusproto", scrapeProtocol)(
+                                "supported", "[OpenMetricsText0.0.1 OpenMetricsText1.0.0 PrometheusText0.0.4]"));
                 continue;
             }
             if (dups.count(scrapeProtocol)) {
